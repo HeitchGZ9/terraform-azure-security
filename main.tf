@@ -37,7 +37,7 @@ resource "azurerm_virtual_network" "terraform_vnet" {
 
 #subnet 1 - Public
 resource "azurerm_subnet" "subnet_public" {
-  name                 = "security-subnet-publicc"
+  name                 = "security-subnet-public"
   resource_group_name  = azurerm_resource_group.terraform_rg.name
   virtual_network_name = azurerm_virtual_network.terraform_vnet.name
   address_prefixes     = ["10.0.1.0/24"]
@@ -52,18 +52,18 @@ resource "azurerm_subnet" "subnet_private" {
 
 
 # Network Security Group (NSG)
-resource "azurerm_network_security_group"  "terraform_netsecgr" {
+resource "azurerm_network_security_group" "terraform_netsecgr" {
   name                = "net_sec_group_1"
   location            = azurerm_resource_group.terraform_rg.location
   resource_group_name = azurerm_resource_group.terraform_rg.name
-  
+
   tags = {
     enviroment = "dev"
   }
 }
 
 
-resource "azurerm_network_security_rule"  "NSG_rule_1" {
+resource "azurerm_network_security_rule" "NSG_rule_1" {
   name                        = "access_test_rule"
   priority                    = 100
   direction                   = "Inbound"
@@ -83,5 +83,36 @@ resource "azurerm_subnet_network_security_group_association" "nsg_assoc_public" 
   network_security_group_id = azurerm_network_security_group.terraform_netsecgr.id
 }
 
+resource "azurerm_public_ip" "public_ip_1" {
+  name                    = "first_ip"
+  location                = azurerm_resource_group.terraform_rg.location
+  resource_group_name     = azurerm_resource_group.terraform_rg.name
+  allocation_method       = "Static"
+  sku                     = "Standard"
+  idle_timeout_in_minutes = 30
+
+
+  tags = {
+    environment = "dev"
+  }
+
+}
+
+resource "azurerm_network_interface" "nic_1" {
+  name                = "nic_1"
+  location            = azurerm_resource_group.terraform_rg.location
+  resource_group_name = azurerm_resource_group.terraform_rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subnet_public.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.public_ip_1.id
+  }
+  tags = {
+    environment = "dev"
+  }
+
+}
 
 
