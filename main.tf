@@ -18,6 +18,7 @@ provider "azurerm" {
 resource "azurerm_resource_group" "terraform_rg" {
   name     = var.resource_group_name
   location = var.location
+
   tags = {
     enviroment = "dev"
   }
@@ -33,6 +34,7 @@ resource "azurerm_virtual_network" "terraform_vnet" {
     enviroment = "dev"
   }
 }
+
 #subnet 1 - Public
 resource "azurerm_subnet" "subnet_public" {
   name                 = "security-subnet-publicc"
@@ -41,7 +43,7 @@ resource "azurerm_subnet" "subnet_public" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 #subnet 2 - Private
-resource "azurerm_subnet" "terraform_subnet" {
+resource "azurerm_subnet" "subnet_private" {
   name                 = "security-subnet-public"
   resource_group_name  = azurerm_resource_group.terraform_rg.name
   virtual_network_name = azurerm_virtual_network.terraform_vnet.name
@@ -50,18 +52,18 @@ resource "azurerm_subnet" "terraform_subnet" {
 
 
 # Network Security Group (NSG)
-resource "azurerm_network_security_group" "terraform_netsecgr" {
+resource "azurerm_network_security_group"  "terraform_netsecgr" {
   name                = "net_sec_group_1"
   location            = azurerm_resource_group.terraform_rg.location
   resource_group_name = azurerm_resource_group.terraform_rg.name
-
+  
   tags = {
     enviroment = "dev"
   }
 }
 
 
-resource "azurerm_network_security_rule" "NSG_rule_1" {
+resource "azurerm_network_security_rule"  "NSG_rule_1" {
   name                        = "access_test_rule"
   priority                    = 100
   direction                   = "Inbound"
@@ -73,6 +75,12 @@ resource "azurerm_network_security_rule" "NSG_rule_1" {
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.terraform_rg.name
   network_security_group_name = azurerm_network_security_group.terraform_netsecgr.name
+}
+
+# Associate NSG with Public Subnet
+resource "azurerm_subnet_network_security_group_association" "nsg_assoc_public" {
+  subnet_id                 = azurerm_subnet.subnet_public.id
+  network_security_group_id = azurerm_network_security_group.terraform_netsecgr.id
 }
 
 
