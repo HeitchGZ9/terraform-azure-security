@@ -63,6 +63,7 @@ resource "azurerm_network_security_group" "terraform_netsecgr" {
 }
 
 
+
 resource "azurerm_network_security_rule" "NSG_rule_1" {
   name                        = "access_test_rule"
   priority                    = 100
