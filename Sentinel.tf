@@ -9,23 +9,24 @@ resource "azurerm_log_analytics_workspace" "law" {
   sku                 = "PerGB2018"
   retention_in_days   = 30
 }
-
+// Sentinel Deployment//
 resource "azurerm_sentinel_log_analytics_workspace_onboarding" "tr-sentinel" {
   workspace_id                 = azurerm_log_analytics_workspace.law.id
   customer_managed_key_enabled = "false"
 }
-
+// Data Connector: Azure Activity Logs//
 resource "azurerm_sentinel_data_connector_azure_active_directory" "aad_connector" {
   name                       = "aad-connector"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
   tenant_id                  = data.azurerm_client_config.current.tenant_id
 }
-
+//Analytic Rule: "Non-Trusted Location Sign-Ins with Threat Intel Malicious IPs"//
 resource "azurerm_sentinel_alert_rule_scheduled" "suspicious_login" {
   name                       = "suspicious_login_by_malicious_IP"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
   display_name               = "Non-Trusted Location Sign-Ins with Threat Intel Malicious IPs"
   severity                   = "High"
+  enabled                    = true
   query                      = <<-QUERY
 let NonTrustedLocationLogin =
 union
@@ -59,4 +60,25 @@ NonTrustedLocationLogin
 | project-away TimeGenerated1
 | sort by TimeGenerated desc
 QUERY
+  trigger_operator           = "GreaterThan"
+  trigger_threshold          = 0
+
+}
+
+//Analytic Rule: "Creation of new VM"//
+resource "azurerm_sentinel_alert_rule_scheduled" "new_vm_created" {
+  name                       = "new_vm_created"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.law.id
+  display_name               = "New Virtual Machine Created"
+  severity                   = "High"
+  enabled                    = true
+  query                      = <<-QUERY
+    AzureActivity
+    | where OperationName == "Create or Update Virtual Machine"
+    | where ActivityStatus == "Succeeded"
+    | project TimeGenerated, Caller, ResourceId
+  QUERY
+
+  trigger_operator  = "GreaterThan"
+  trigger_threshold = 0
 }
